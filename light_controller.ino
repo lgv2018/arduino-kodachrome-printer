@@ -1,157 +1,246 @@
+/* SparkFun TSL2561 library example sketch
 
+This sketch shows how to use the SparkFunTSL2561
+library to read the AMS/TAOS TSL2561
+light sensor.
+
+Product page: https://www.sparkfun.com/products/11824
+Hook-up guide: https://learn.sparkfun.com/tutorials/getting-started-with-the-tsl2561-luminosity-sensor
+
+Hardware connections:
+
+3V3 to 3.3V
+GND to GND
+
+(WARNING: do not connect 3V3 to 5V
+or the sensor will be damaged!)
+
+You will also need to connect the I2C pins (SCL and SDA) to your Arduino.
+The pins are different on different Arduinos:
+
+                    SDA    SCL
+Any Arduino         "SDA"  "SCL"
+Uno, Redboard, Pro  A4     A5
+Mega2560, Due       20     21
+Leonardo            2      3
+
+You do not need to connect the INT (interrupt) pin
+for basic operation.
+
+Operation:
+
+Upload this sketch to your Arduino, and open the
+Serial Monitor window to 9600 baud.
+
+Have fun! -Your friends at SparkFun.
+
+Our example code uses the "beerware" license.
+You can do anything you like with this code.
+No really, anything. If you find it useful,
+buy me a beer someday.
+
+V10 Mike Grusin, SparkFun Electronics 12/26/2013
+Updated to Arduino 1.6.4 5/2015
+*/
+
+// Your sketch must #include this library, and the Wire library
+// (Wire is a standard library included with Arduino):
+
+#include <SparkFunTSL2561.h>
 #include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_TSL2561_U.h>
 
-/* This driver uses the Adafruit unified sensor library (Adafruit_Sensor),
-   which provides a common 'type' for sensor data and some helper functions.
-   
-   To use this driver you will also need to download the Adafruit_Sensor
-   library and include it in your libraries folder.
+// Create an SFE_TSL2561 object, here called "light":
 
-   You should also assign a unique ID to this sensor for use with
-   the Adafruit Sensor API so that you can identify this particular
-   sensor in any data logs, etc.  To assign a unique ID, simply
-   provide an appropriate value in the constructor below (12345
-   is used by default in this example).
-   
-   Connections
-   ===========
-   Connect SCL to analog 5
-   Connect SDA to analog 4
-   Connect VDD to 3.3V DC
-   Connect GROUND to common ground
+SFE_TSL2561 light;
+int         ledlevel=255;
+int         redpin=9;
+int         bluepin=10;
+int         colorsw=2;
+int         redlux;
+// Global variables:
 
-   I2C Address
-   ===========
-   The address will be different depending on whether you leave
-   the ADDR pin floating (addr 0x39), or tie it to ground or vcc. 
-   The default addess is 0x39, which assumes the ADDR pin is floating
-   (not connected to anything).  If you set the ADDR pin high
-   or low, use TSL2561_ADDR_HIGH (0x49) or TSL2561_ADDR_LOW
-   (0x29) respectively.
-    
-   History
-   =======
-   2013/JAN/31  - First version (KTOWN)
-*/
-   
-Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
+boolean gain;     // Gain setting, 0 = X1, 1 = X16;
+unsigned int ms;  // Integration ("shutter") time in milliseconds
 
-/**************************************************************************/
-/*
-    Displays some basic information on this sensor from the unified
-    sensor API sensor_t type (see Adafruit_Sensor for more information)
-*/
-/**************************************************************************/
-void displaySensorDetails(void)
+void setup()
 {
-  sensor_t sensor;
-  tsl.getSensor(&sensor);
-  Serial.println("------------------------------------");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-  Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-  Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" lux");
-  Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" lux");
-  Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" lux");  
-  Serial.println("------------------------------------");
-  Serial.println("");
-  delay(500);
-}
-
-/**************************************************************************/
-/*
-    Configures the gain and integration time for the TSL2561
-*/
-/**************************************************************************/
-void configureSensor(void)
-{
-  /* You can also manually set the gain or enable auto-gain support */
-  // tsl.setGain(TSL2561_GAIN_1X);      /* No gain ... use in bright light to avoid sensor saturation */
-  //tsl.setGain(TSL2561_GAIN_16X);     /* 16x gain ... use in low light to boost sensitivity */
-  tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
+  // Initialize the Serial port:
   
-  /* Changing the integration time gives you better sensor resolution (402ms = 16-bit data) */
-  tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
-  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_101MS);  /* medium resolution and speed   */
-  // tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_402MS);  /* 16-bit data but slowest conversions */
-
-  /* Update these values depending on what you've set above! */  
-  Serial.println("------------------------------------");
-  Serial.print  ("Gain:         "); Serial.println("Auto");
-  Serial.print  ("Timing:       "); Serial.println("13 ms");
-  Serial.println("------------------------------------");
-}
-
-/**************************************************************************/
-/*
-    Arduino setup function (automatically called at startup)
-*/
-/**************************************************************************/
-int ledPin = 6;    // LED connected to digital pin 9
-int ledlevel;
-void setup(void) 
-{
   Serial.begin(9600);
-  Serial.println("Light Sensor Test"); Serial.println("");
-  
-  /* Initialise the sensor */
-  if(!tsl.begin())
-  {
-    /* There was a problem detecting the TSL2561 ... check your connections */
-    Serial.print("Ooops, no TSL2561 detected ... Check your wiring or I2C ADDR!");
-    while(1);
-  }
-  
-  /* Display some basic information on this sensor */
-  displaySensorDetails();
-  
-  /* Setup the sensor gain and integration time */
-  configureSensor();
-  
-  /* We're ready to go! */
+  Serial.println("Kodachrome color printing block.");
+  Serial.println("Copyright 2017 Kelly-Shane Fuller.");
+  Serial.println("photo@piratelogy.com");
   Serial.println("");
+  
+  pinMode(colorsw,INPUT);
+  
+  light.begin();
+
+  // Get factory ID from sensor:
+  // (Just for fun, you don't need to do this to operate the sensor)
+
+  unsigned char ID;
+  Serial.println("Initializing light sensor...");
+  if (light.getID(ID))
+  {
+    Serial.print("Got factory ID: 0X");
+    Serial.print(ID,HEX);
+    Serial.println(", should be 0X5X");
+  }
+  // Most library commands will return true if communications was successful,
+  // and false if there was a problem. You can ignore this returned value,
+  // or check whether a command worked correctly and retrieve an error code:
+  else
+  {
+    byte error = light.getError();
+    printError(error);
+  }
+
+  // The light sensor has a default integration time of 402ms,
+  // and a default gain of low (1X).
+  
+  // If you would like to change either of these, you can
+  // do so using the setTiming() command.
+  
+  // If gain = false (0), device is set to low gain (1X)
+  // If gain = high (1), device is set to high gain (16X)
+
+  gain = 0;
+
+  // If time = 0, integration will be 13.7ms
+  // If time = 1, integration will be 101ms
+  // If time = 2, integration will be 402ms
+  // If time = 3, use manual start / stop to perform your own integration
+
+  unsigned char time = 0;
+
+  // setTiming() will set the third parameter (ms) to the
+  // requested integration time in ms (this will be useful later):
+  
+  Serial.println("Set timing...");
+  light.setTiming(gain,time,ms);
+
+  // To start taking measurements, power up the sensor:
+  
+  Serial.println("Powerup...");
+  light.setPowerUp();
+  // The sensor will now gather light during the integration time.
+  // After the specified time, you can retrieve the result from the sensor.
+  // Once a measurement occurs, another integration period will start.
 }
 
-/**************************************************************************/
-/*
-    Arduino loop function, called once 'setup' is complete (your own code
-    should go here)
-*/
-/**************************************************************************/
-void loop(void) 
-{  
-  /* Get a new sensor event */ 
-  sensors_event_t event;
-  tsl.getEvent(&event);
- 
-  /* Display the results (light is measured in lux) */
-  if (event.light)
-  {
-    Serial.print(event.light); Serial.println(" lux");
+void loop()
+{
+  // Wait between measurements before retrieving the result
+  // (You can also configure the sensor to issue an interrupt
+  // when measurements are complete)
+  
+  // This sketch uses the TSL2561's built-in integration timer.
+  // You can also perform your own manual integration timing
+  // by setting "time" to 3 (manual) in setTiming(),
+  // then performing a manualStart() and a manualStop() as in the below
+  // commented statements:
+  
+  // ms = 1000;
+  // light.manualStart();
+  delay(30);
+  // light.manualStop();
+   
+  // There are two light sensors on the device, one for visible lightre
+  // and one for infrared. Both sensors are needed for lux calculations.
+  
+  // Retrieve the data from the device:
 
-    if (event.light > 400)
-      {
-        ledlevel = ledlevel -1 ;
-      }
-      else if(event.light < 400) 
-      {
-        ledlevel = ledlevel +1;
-        
-      }
-      if (ledlevel <= 0) { ledlevel =0;}
-      if (ledlevel >= 255) {ledlevel = 255; }
-      Serial.print(ledlevel); Serial.println(" level");
-      analogWrite(ledPin, map((1023 - ledlevel), 0, 1023, 0, 255));
+  unsigned int data0, data1;
+  
+  if (light.getData(data0,data1))
+  {
+    // getData() returned true, communication was successful
+    
+    Serial.print("data0: ");
+    Serial.print(data0);
+    Serial.print(" data1: ");
+    Serial.println(data1);
+  
+    // To calculate lux, pass all your settings and readings
+    // to the getLux() function.
+    
+    // The getLux() function will return 1 if the calculation
+    // was successful, or 0 if one or both of the sensors was
+    // saturated (too much light). If this happens, you can
+    // reduce the integration time and/or gain.
+    // For more information see the hookup guide at: https://learn.sparkfun.com/tutorials/getting-started-with-the-tsl2561-luminosity-sensor
+  
+    double lux;    // Resulting lux value
+    boolean good;  // True if neither sensor is saturated
+    
+    // Perform lux calculation:
+
+    good = light.getLux(gain,ms,data0,data1,lux);
+    
+    //Calculate LED intensity based on light sensor readings. 
+    if(digitalRead(colorsw)==HIGH)
+    {
+    if(lux > 6830) { ledlevel++;}
+    if(lux < 6820)  { ledlevel--;}
+    if(ledlevel >= 255) { ledlevel =255;}
+    if(ledlevel <=0) { ledlevel = 0; }
+      analogWrite(redpin, ledlevel);
+      analogWrite(bluepin, 255);
+      Serial.print("RED ");
+    }
+    else
+    {
+      if(lux > 4098) { ledlevel++;}
+      if(lux < 4088)  { ledlevel--;}
+      if(ledlevel >= 255) { ledlevel =255;}
+      if(ledlevel <=0) { ledlevel = 0; }
+      analogWrite(bluepin, ledlevel);      
+      analogWrite(redpin,255);
+      Serial.print("BLUE ");
+    }
+    Serial.print("LEDLevel:");
+    Serial.println(ledlevel);
+    Serial.print(" lux: ");
+    Serial.print(lux);
+    if (good) Serial.println(" (good)"); else Serial.println(" (BAD)");
   }
   else
   {
-    /* If event.light = 0 lux the sensor is probably saturated
-       and no reliable data could be generated! */
-    Serial.println("Sensor overload");
+    // getData() returned false because of an I2C error, inform the user.
+
+    byte error = light.getError();
+    printError(error);
   }
-  //analogWrite(ledPin, map((1023 - event.light), 0, 1023, 0, 255));
-  
-  delay(250);
 }
+
+void printError(byte error)
+  // If there's an I2C error, this function will
+  // print out an explanation.
+{
+  Serial.print("I2C error: ");
+  Serial.print(error,DEC);
+  Serial.print(", ");
+  
+  switch(error)
+  {
+    case 0:
+      Serial.println("success");
+      break;
+    case 1:
+      Serial.println("data too long for transmit buffer");
+      break;
+    case 2:
+      Serial.println("received NACK on address (disconnected?)");
+      break;
+    case 3:
+      Serial.println("received NACK on data");
+      break;
+    case 4:
+      Serial.println("other error");
+      break;
+    default:
+      Serial.println("unknown error");
+  }
+}
+
