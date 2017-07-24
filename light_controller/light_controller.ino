@@ -55,7 +55,7 @@ SFE_TSL2561 light;
 int         ledlevel=255;
 int         redpin=9;
 int         bluepin=10;
-int         colorsw=2;
+int         colorsw=3;
 int         redlux;
 // Global variables:
 
