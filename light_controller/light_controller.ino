@@ -181,8 +181,8 @@ void loop()
     //Calculate LED intensity based on light sensor readings. 
     if(digitalRead(colorsw)==HIGH)
     {
-    if(lux > 4500) { ledlevel++;} //6830
-    if(lux < 4000)  { ledlevel--;}
+    if(lux > 3500) { ledlevel++;} //6830
+    if(lux < 3000)  { ledlevel--;}
     if(ledlevel >= 255) { ledlevel =255;}
     if(ledlevel <=0) { ledlevel = 0; }
       analogWrite(redpin, ledlevel);
